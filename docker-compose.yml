@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  book-recommender:
+    build: .
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    environment:
+      - PYTHONPATH=/app
+      - ENV=development
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:7860/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Redis for caching (if implemented)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    profiles:
+      - full
+
+  # Optional: PostgreSQL for user data (if implemented)
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: bookrecommender
+      POSTGRES_USER: recommender
+      POSTGRES_PASSWORD: securepassword123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    profiles:
+      - full
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  default:
+    name: bookrecommender_network
